@@ -165,8 +165,63 @@
          (reduce fold-sig [])
          (apply mapv unify-sig-part))))
 
+(def ^:private primitive-tags
+  '#{int long float double boolean byte char short})
+
+(defn- core--maybe-special-tag [sym]
+  (when (and (symbol? sym)
+             (primitive-tags sym))
+    sym))
+
+(defn core--maybe-class
+  ([form]
+   (core--maybe-class form true))
+  ([form _string-ok]
+   (let [clsname (cond
+                   (symbol? form) (name form)
+                   (string? form) form
+                   :else nil)]
+     (when clsname
+       (try
+         (Class/forName clsname)
+         (catch Throwable _ nil))))))
+
+(defn- core--sigs [fdecl]
+  (let [asig
+         (fn [fdecl]
+           (let [arglist (first fdecl)
+                 ;elide implicit macro args
+                 arglist (if (= '&form (first arglist))
+                           (subvec arglist 2 (count arglist))
+                           arglist)
+                 body (next fdecl)]
+             (if (map? (first body))
+               (if (next body)
+                 (with-meta arglist (conj (if (meta arglist) (meta arglist) {}) (first body)))
+                 arglist)
+               arglist)))
+         resolve-tag (fn [argvec]
+                        (let [m (meta argvec)
+                              ^clojure.lang.Symbol tag (:tag m)]
+                          (if (instance? clojure.lang.Symbol tag)
+                            (if (== (.indexOf (.getName tag) ".") -1)
+                              (if (= nil (core--maybe-special-tag tag))
+                                (let [c (core--maybe-class tag false)]
+                                  (if c
+                                    (with-meta argvec (assoc m :tag (clojure.lang.Symbol/intern (.getName c))))
+                                    argvec))
+                                argvec)
+                              argvec)
+                            argvec)))]
+     (if (seq? (first fdecl))
+       (loop [ret [] fdecls fdecl]
+         (if fdecls
+           (recur (conj ret (resolve-tag (asig (first fdecls)))) (next fdecls))
+           (seq ret)))
+       (list (resolve-tag (asig fdecl))))))
+
 (defn- sigs [body]
-  (->> (@#'clojure.core/sigs body)
+  (->> (core--sigs body)
        vec
        (group-by count)
        sort
