@@ -10,7 +10,8 @@
       (* x x))
     (is (= 4 (square 2)))
     (is (= 9 (square 3)))
-    (is (thrown? IllegalArgumentException (square 3 4)))))
+    (is (thrown? IllegalArgumentException (square 3 4)))
+    (is (= '([x]) (-> #'square meta :arglists)))))
 
 (deftest test-say-hi
   (testing "say-hi"
@@ -23,7 +24,8 @@
     (is (= "Hi,good morning, dennis." (say-hi :dennis)))
     (is (= "Hi, catty, what time is it?" (say-hi :catty)))
     (is (= "Hi,green, what a good day!" (say-hi :green)))
-    (is (= "Say hi to someone" (say-hi "someone")))))
+    (is (= "Say hi to someone" (say-hi "someone")))
+    (is (= '([other]) (-> #'say-hi meta :arglists)))))
 
 (deftest test-recursive-function
   (testing "accum"
@@ -32,13 +34,15 @@
       ([n ret] (recur (dec n) (+ n ret)))
       ([n] (recur n 0)))
     (is (= 6 (accum 3)))
-    (is (= 5050 (accum 100))))
+    (is (= 5050 (accum 100)))
+    (is (= '([n] [n ret]) (-> #'accum meta :arglists))))
   (testing "fib"
     (defun fib
       ([0] 0)
       ([1] 1)
       ([n] (+ (fib (- n 1)) (fib (- n 2)))))
-    (is (= 55 (fib 10)))))
+    (is (= 55 (fib 10)))
+    (is (= '([n]) (-> #'fib meta :arglists)))))
 
 (deftest test-guards
   (testing "funny"
@@ -46,14 +50,16 @@
       ([(N :guard #(= 42 %))] true)
       ([_] false))
     (is (funny 42))
-    (is (not (funny 43))))
+    (is (not (funny 43)))
+    (is (= '([N]) (-> #'funny meta :arglists))))
   (testing "valid-geopoint?"
     (defun valid-geopoint?
       ([(_ :guard #(and (> % -180) (< % 180)))
         (_ :guard #(and (> % -90) (< % 90)))] true)
       ([_ _] false))
     (is (valid-geopoint? 30 30))
-    (is (not (valid-geopoint? -181 30)))))
+    (is (not (valid-geopoint? -181 30)))
+    (is (= '([_ _]) (-> #'valid-geopoint? meta :arglists)))))
 
 (deftest test-match-literals
   (testing "test1"
@@ -63,7 +69,8 @@
       ([false true] 3)
       ([false false] 4))
     (is (= 2 (test1 true true)))
-    (is (= 4 (test1 false false)))))
+    (is (= 4 (test1 false false)))
+    (is (= '([_ _]) (-> #'test1 meta :arglists)))))
 
 (deftest test-match-vector
   (testing "test3"
@@ -73,13 +80,15 @@
       ([[1 2 3]] :a2))
     (is (= :a2 (test3 [1 2 3])))
     (is (= :a0 (test3 [3 3 2])))
-    (is (= :a1 (test3 [1 1 3]))))
+    (is (= :a1 (test3 [1 1 3])))
+    (is (= '([_]) (-> #'test3 meta :arglists))))
   (testing "test2"
     (defun test2
       ([([1] :seq)] :a0)
       ([([1 2] :seq)] :a1)
       ([([1 2 nil nil nil] :seq)] :a2))
-    (is (= :a2 (test2 [1 2 nil nil nil])))))
+    (is (= :a2 (test2 [1 2 nil nil nil])))
+    (is (= '([_]) (-> #'test2 meta :arglists)))))
 
 (deftest test-private-macro
   (testing "private macro"

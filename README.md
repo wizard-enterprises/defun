@@ -154,23 +154,21 @@ Of course, you can use `defun-` to define a function that is private just as `de
 
 ### More Patterns
 
-In fact ,the above `say-hi` function will be expanded to be:
+In fact, the above `accum` function can be thought of as expanding to be approximately:
 
 ``` clj
 (defn
- say-hi
- {:arglists '([& args])}
- [& args#]
- (clojure.core.match/match
-  [(vec args#)]
-  [[:dennis]]
-  (do "Hi,good morning, dennis.")
-  [[:catty]]
-  (do "Hi, catty, what time is it?")
-  [[:green]]
-  (do "Hi,green, what a good day!")
-  [[other]]
-  (do (str "Say hi to " other))))
+ accum
+ {:arglists '([n] [n ret])}
+ ([-n] (accum n defun.core/placeholder))
+ ([-n -ret]
+   (clojure.core.match/match [[-n -ret]]
+     [n defun.core/placeholder]
+     (do (recur n 0))
+     [0 ret]
+     (do ret)
+     [n ret]
+     (do (recur (dec n) (+ n ret))))))
 ```
 
 The argument vector is in fact a pattern in core.match, so we can use all patterns that supported by [core.match](https://github.com/clojure/core.match/wiki/Basic-usage).

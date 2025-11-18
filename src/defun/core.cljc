@@ -152,6 +152,26 @@
                                 (map #(cons `fun %) fnspecs)))
               ~@body)))
 
+(defn- unify-arity-sigs [[k sigs]]
+  (letfn
+      [(fold-sig [sigs sig]
+         (->> sig
+              (map #(cond-> % (seq? %) first))
+              (conj sigs)))
+       (unify-sig-part [& parts]
+         (let [parts (->> parts (map #(cond-> % (not (symbol? %)) ((fn [_] '_)))))]
+           (or (some #(when (not= '_ %) %) parts) (first parts))))]
+    (->> sigs
+         (reduce fold-sig [])
+         (apply mapv unify-sig-part))))
+
+(defn- sigs [body]
+  (->> (@#'clojure.core/sigs body)
+       vec
+       (group-by count)
+       sort
+       (map unify-arity-sigs)))
+
 #?(:clj
    (defmacro defun
      "Define a function just like clojure.core/defn, but using core.match to
@@ -161,8 +181,8 @@
            body (if (vector? (first body))
                   (list body)
                   body)
-           name (vary-meta name assoc :arglists (list 'quote (@#'clojure.core/sigs body)))]
-       `(def ~name (fun ~@body)))))
+           name (vary-meta name assoc :arglists (list 'quote (sigs body)))]
+       `(def ~name (fun ~name ~@body)))))
 
 #?(:clj
    (defmacro defun-
