@@ -152,19 +152,6 @@
                                 (map #(cons `fun %) fnspecs)))
               ~@body)))
 
-(defn- unify-arity-sigs [[k sigs]]
-  (letfn
-      [(fold-sig [sigs sig]
-         (->> sig
-              (map #(cond-> % (seq? %) first))
-              (conj sigs)))
-       (unify-sig-part [& parts]
-         (let [parts (->> parts (map #(cond-> % (not (symbol? %)) ((fn [_] '_)))))]
-           (or (some #(when (not= '_ %) %) parts) (first parts))))]
-    (->> sigs
-         (reduce fold-sig [])
-         (apply mapv unify-sig-part))))
-
 (def ^:private primitive-tags
   '#{int long float double boolean byte char short})
 
@@ -219,6 +206,19 @@
            (recur (conj ret (resolve-tag (asig (first fdecls)))) (next fdecls))
            (seq ret)))
        (list (resolve-tag (asig fdecl))))))
+
+(defn- unify-arity-sigs [[k sigs]]
+  (letfn
+      [(fold-sig [sigs sig]
+         (->> sig
+              (map #(cond-> % (seq? %) first))
+              (conj sigs)))
+       (unify-sig-part [& parts]
+         (let [parts (->> parts (map #(cond-> % (not (symbol? %)) ((fn [_] '_)))))]
+           (or (some #(when (not= '_ %) %) parts) (first parts))))]
+    (->> sigs
+         (reduce fold-sig [])
+         (apply mapv unify-sig-part))))
 
 (defn- sigs [body]
   (->> (core--sigs body)
